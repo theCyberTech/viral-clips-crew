@@ -3,9 +3,11 @@ import os
 import time
 import warnings
 import logging
+import fcntl
 
 # Related third party imports
 from dotenv import load_dotenv
+import lockfile
 
 # Local application/library specific imports
 import clipper
@@ -36,32 +38,14 @@ for var in required_vars:
         raise EnvironmentError(f"Required environment variable {var} is not set or is set to 'None'.")
 
 
-def wait_for_file(filepath, timeout=30):
-    """
-    This function checks if a file is ready to be accessed. It does this by repeatedly checking if the file exists and
-    can be opened in append mode, until a specified timeout period has passed.
-
-    Args:
-    filepath (str): The path to the file to check.
-    timeout (int): The number of seconds to wait before giving up. Default is 30.
-
-    Returns:
-    bool: True if the file is ready, False otherwise.
-    """
-    def file_ready(filename):
+def wait_for_file(filepath):
+    lock = lockfile.FileLock(filepath)
+    while not lock.i_am_locking():
         try:
-            with open(filename, 'ab'):
-                return True
-        except IOError:
-            logging.error(f"Error: File not ready: {filename}")
-            return False
-
-    start_time = time.time()
-    while time.time() - start_time < timeout:
-        if os.path.exists(filepath) and file_ready(filepath):
-            return True
-        time.sleep(1)
-    return False
+            lock.acquire(timeout=1)  # wait for 1 second
+        except lockfile.LockTimeout:
+            pass
+    return True
 
 
 def process_subtitles(input_video_path, subtitle_file, output_video_folder):
@@ -87,7 +71,8 @@ def process_subtitles(input_video_path, subtitle_file, output_video_folder):
     logging.info(f"Video processed and saved to {subtitled_video_path}")
 
 
-def process_videos(input_folder, output_video_folder, crew_output_folder, transcript=None, subtitles=None, transcribe_flag=True):
+def process_videos(input_folder, output_video_folder, crew_output_folder, transcript=None, subtitles=None,
+                   transcribe_flag=True):
     """Process each video file in the input folder
 
     Args:
@@ -105,12 +90,14 @@ def process_videos(input_folder, output_video_folder, crew_output_folder, transc
 
             if transcribe_flag:
                 if transcript and subtitles:
-                    initial_srt_path = os.path.join(crew_output_folder, f"{os.path.splitext(filename)[0]}_subtitles.srt")
+                    initial_srt_path = os.path.join(crew_output_folder,
+                                                    f"{os.path.splitext(filename)[0]}_subtitles.srt")
                     with open(initial_srt_path, 'w') as srt_file:
                         srt_file.write(subtitles)
                 else:
                     full_transcript, full_subtitles = transcribe.main(input_video_path)
-                    initial_srt_path = os.path.join(crew_output_folder, f"{os.path.splitext(filename)[0]}_subtitles.srt")
+                    initial_srt_path = os.path.join(crew_output_folder,
+                                                    f"{os.path.splitext(filename)[0]}_subtitles.srt")
                     with open(initial_srt_path, 'w') as srt_file:
                         srt_file.write(full_subtitles)
             else:
