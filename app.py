@@ -1,10 +1,10 @@
-# Standard library imports
 import os
 import warnings
 import logging
 
-# Third party imports
 from dotenv import load_dotenv
+
+# Third-party imports
 import lockfile
 
 # Local application imports
@@ -15,75 +15,81 @@ import transcribe
 from ytdl import main as ytdl_main
 from local_whisper import local_whisper_process
 
-# Setup logging
+# Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+# Ignore warnings
 warnings.filterwarnings("ignore")
 
 # Load environment variables
 load_dotenv()
 
-# List of required environment variables
-required_vars = ['OPENAI_API_KEY', 'GEMINI_API_KEY']
+# Define folder paths
+FOLDERS = {
+    'input': './input_files',
+    'output_video': './clipper_output',
+    'crew_output': './crew_output',
+    'whisper_output': './whisper_output'
+}
 
-"""
-This for loop checks if the required environment variables are set. 
-If any of the required environment variables are set to 'None', an EnvironmentError is raised.
-"""
-for var in required_vars:
-    value = os.getenv(var)
-    if value is None or value == 'None':
-        raise EnvironmentError(f"Required environment variable {var} is not set or is set to 'None'.")
+
+def check_required_vars(required_vars):
+    """Check if the required environment variables are set. Raise an error if any are missing."""
+    missing_vars = [var for var in required_vars if os.getenv(var) is None]
+    if missing_vars:
+        raise EnvironmentError(f"Required environment variables not set: {', '.join(missing_vars)}")
+
+
+def get_user_choice():
+    """Prompt the user to select an option to proceed."""
+    logging.info("Please select an option to proceed:")
+    logging.info("1: Submit a YouTube Video Link")
+    logging.info("2: Use an existing video file")
+    return input("Please choose either option 1 or 2: ")
+
+
+def process_choice(choice):
+    """Process the user choice."""
+    if choice == '1':
+        logging.info("Submitting a YouTube Video Link")
+        url = input("Enter the YouTube URL: ")
+        ytdl_main(url, FOLDERS['input'], FOLDERS['whisper_output'], FOLDERS['whisper_output'])
+        return False
+    elif choice == '2':
+        if os.listdir(FOLDERS['input']):
+            logging.info("Using an existing video file")
+            return True
+        else:
+            logging.error(f"No video files found in the folder: {FOLDERS['input']}")
+            return None
+    else:
+        logging.error("Invalid choice")
+        return None
+
+
+def create_directories():
+    """Create necessary directories."""
+    try:
+        for folder in FOLDERS.values():
+            os.makedirs(folder, exist_ok=True)
+    except Exception as e:
+        logging.error(f"Error creating directories: {e}")
+        raise
 
 
 def main():
-    input_folder = './input_files'
-    output_video_folder = './clipper_output'
-    crew_output_folder = './crew_output'
-    whisper_output_folder = './whisper_output'
+    required_vars = ['OPENAI_API_KEY', 'GEMINI_API_KEY']
+    check_required_vars(required_vars)
 
-    # User selection
-    def user_prompt():
-        """Prompt the user to select an option to proceed"""
-        logging.info("Please select an option to proceed:")
-        logging.info("1: Submit a YouTube Video Link")
-        logging.info("2: Use an existing video file")
-
-    def user_choice():
-        """Get the user's choice"""
-        choice = input("Please choose either option 1 or 2: ")
-        return choice
+    create_directories()
 
     while True:
-        user_prompt()  # Display the prompt before asking for the choice
-        choice = user_choice()
-
-        if choice == '1':
-            logging.info("Submitting a YouTube Video Link")
-            # Download video from YouTube
-            url = input("Enter the YouTube URL: ")
-            ytdl_main(url, input_folder, whisper_output_folder, whisper_output_folder)
-            transcribe_flag = False
+        choice = get_user_choice()
+        transcribe_flag = process_choice(choice)
+        if transcribe_flag is not None:
             break
-        elif choice == '2':
-            logging.info("Using an existing video file")
-            if not os.listdir(input_folder):
-                logging.error(f"No video files found in the folder: {input_folder}")
-                continue
-            transcribe_flag = True
-            break
-        else:
-            logging.info("Invalid choice. Please try again.")
 
-    try:
-        os.makedirs(output_video_folder, exist_ok=True)
-        os.makedirs(crew_output_folder, exist_ok=True)
-        os.makedirs(whisper_output_folder, exist_ok=True)
-    except Exception as e:
-        logging.error(f"Error creating directories: {e}")
-        return
-
-    local_whisper_process(input_folder, output_video_folder, crew_output_folder, transcribe_flag=transcribe_flag)
+    local_whisper_process(FOLDERS['input'], FOLDERS['output_video'], FOLDERS['crew_output'], transcribe_flag=transcribe_flag)
 
 
 if __name__ == "__main__":
