@@ -1,11 +1,11 @@
 import os
 import warnings
 import logging
-
-from dotenv import load_dotenv
+from typing import Optional
 
 # Third-party imports
 import lockfile
+from dotenv import load_dotenv
 
 # Local application imports
 import clipper
@@ -33,14 +33,14 @@ FOLDERS = {
 }
 
 
-def check_required_vars(required_vars):
+def check_required_vars(required_vars) -> None:
     """Check if the required environment variables are set. Raise an error if any are missing."""
     missing_vars = [var for var in required_vars if os.getenv(var) is None]
     if missing_vars:
         raise EnvironmentError(f"Required environment variables not set: {', '.join(missing_vars)}")
 
 
-def get_user_choice():
+def get_user_choice() -> str:
     """Prompt the user to select an option to proceed."""
     logging.info("Please select an option to proceed:")
     logging.info("1: Submit a YouTube Video Link")
@@ -48,7 +48,7 @@ def get_user_choice():
     return input("Please choose either option 1 or 2: ")
 
 
-def process_choice(choice):
+def process_choice(choice) -> Optional[bool]:
     """Process the user choice."""
     if choice == '1':
         logging.info("Submitting a YouTube Video Link")
@@ -67,7 +67,7 @@ def process_choice(choice):
         return None
 
 
-def create_directories():
+def create_directories() -> None:
     """Create necessary directories."""
     try:
         for folder in FOLDERS.values():
