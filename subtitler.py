@@ -4,6 +4,7 @@ import subprocess
 import re
 import datetime
 import logging
+from security import safe_command
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -71,7 +72,7 @@ def burn_subtitles(video_path, subtitle_path, output_video_path):
     ]
     
     try:
-        subprocess.run(cmd, check=True)
+        safe_command.run(subprocess.run, cmd, check=True)
         logging.info(f"Subtitles have been burned into the video: {output_video_path}")
     except subprocess.CalledProcessError as e:
         logging.error(f"Error burning subtitles: {e}")
