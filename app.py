@@ -105,10 +105,16 @@ def main():
     crew_output_folder_path = Path(crew_output_folder)
     output_video_folder_path = Path(output_video_folder)
 
-    for video_file in input_folder_path.glob('*.mp4'):
-        for srt_file in crew_output_folder_path.glob('*.srt'):
-            clipper.main(str(video_file), str(srt_file), str(output_video_folder_path), aspect_ratio_choice)
-            logging.info(f"Processed {video_file} with {srt_file}")
+    # Use only the first video file since the pipeline processes one video at a time
+    video_files = list(input_folder_path.glob('*.mp4'))
+    if not video_files:
+        logging.error("No video files found in input folder. Exiting.")
+        return
+    video_file = video_files[0]
+
+    for srt_file in crew_output_folder_path.glob('*.srt'):
+        clipper.main(str(video_file), str(srt_file), str(output_video_folder_path), aspect_ratio_choice)
+        logging.info(f"Processed {video_file} with {srt_file}")
 
     # Process with subtitler.py
     for video_file in output_video_folder_path.glob('*_trimmed.mp4'):

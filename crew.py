@@ -22,10 +22,6 @@ load_dotenv()
 
 gemini_api_key = os.getenv('GEMINI_API_KEY')
 
-# Ensure the Path is correctly imported
-if 'Path' not in globals():
-    from pathlib import Path
-
 def get_subtitles():
     whisper_output_dir = Path('whisper_output')
     if not whisper_output_dir.exists():
@@ -42,7 +38,12 @@ def get_subtitles():
 
     return subtitles
 
-def main(extracts):
+def main(extracts_list):
+    # Validate extracts_list has exactly 3 items
+    if not extracts_list or len(extracts_list) < 3:
+        logging.error(f"Expected 3 extracts, but got {len(extracts_list) if extracts_list else 0}. Exiting.")
+        return None
+
     # Create the crew_output directory if it doesn't exist
     os.makedirs("crew_output", exist_ok=True)
 
@@ -128,7 +129,7 @@ def main(extracts):
         
             Here is the transcription extract:
             <segments>
-            {extracts[0]}
+            {extracts_list[0]}
             </segments>
         
             Here is the full content of the .srt subtitle file:
@@ -196,7 +197,7 @@ def main(extracts):
 
             Here is the transcription extract:
             <segments>
-            {extracts[1]}
+            {extracts_list[1]}
             </segments>
 
             Here is the full content of the .srt subtitle file:
@@ -265,7 +266,7 @@ def main(extracts):
 
             Here is the transcription extract:
             <segments>
-            {extracts[2]}
+            {extracts_list[2]}
             </segments>
 
             Here is the full content of the .srt subtitle file:
