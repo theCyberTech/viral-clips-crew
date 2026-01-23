@@ -80,6 +80,10 @@ fabric.properties
 *.env
 !.env.example
 
+# Python cache
+__pycache__/
+*.pyc
+
 # Custom input and output directories
 crew_output
 whisper_output
