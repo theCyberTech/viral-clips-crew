@@ -106,9 +106,13 @@ def main():
     output_video_folder_path = Path(output_video_folder)
 
     for video_file in input_folder_path.glob('*.mp4'):
-        for srt_file in crew_output_folder_path.glob('*.srt'):
+        base_name = video_file.stem
+        srt_file = crew_output_folder_path / f"{base_name}.srt"
+        if srt_file.exists():
             clipper.main(str(video_file), str(srt_file), str(output_video_folder_path), aspect_ratio_choice)
             logging.info(f"Processed {video_file} with {srt_file}")
+        else:
+            logging.warning(f"No matching SRT found for {video_file}, skipping clipping")
 
     # Process with subtitler.py
     for video_file in output_video_folder_path.glob('*_trimmed.mp4'):
