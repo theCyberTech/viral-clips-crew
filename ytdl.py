@@ -7,6 +7,7 @@ from pathlib import Path
 # Third party imports
 from youtube_transcript_api import YouTubeTranscriptApi
 import yt_dlp
+import ffmpeg
 
 # Local application imports
 
@@ -29,6 +30,11 @@ def yt_vid_url_to_mp4(yt_vid_url, mp4_dir_save_path):
         'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
         'outtmpl': os.path.join(mp4_dir_save_path, '%(title)s.%(ext)s'),
         'restrictfilenames': True,
+        'merge_output_format': 'mp4',
+        'postprocessors': [{
+            'key': 'FFmpegVideoConvertor',
+            'preferedformat': 'mp4',
+        }],
     }
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -38,10 +44,17 @@ def yt_vid_url_to_mp4(yt_vid_url, mp4_dir_save_path):
 
     video_file = Path(filename)
 
-    # Ensure the file has a .mp4 extension
+    # Ensure the file has a .mp4 extension (defensive fallback)
     if not video_file.suffix == '.mp4':
         new_video_file = video_file.with_suffix('.mp4')
-        video_file.rename(new_video_file)
+        logging.info(f"Converting {video_file.suffix} to .mp4 via ffmpeg...")
+        (
+            ffmpeg
+            .input(str(video_file))
+            .output(str(new_video_file), vcodec='libx264', acodec='aac')
+            .run(overwrite_output=True)
+        )
+        video_file.unlink()
         video_file = new_video_file
 
     return str(video_file)
