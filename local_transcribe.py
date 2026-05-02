@@ -17,12 +17,12 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 warnings.filterwarnings("ignore")
 
 
-def transcribe_file(model, srt, plain, file):
+def transcribe_file(model, srt, plain, file, output_dir="whisper_output"):
     input_file_path = Path(file)
     logging.info(f"Transcribing file: {input_file_path}\n")
 
     # Ensure the output directory exists
-    output_dir = Path("whisper_output")
+    output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # Run Whisper
@@ -54,7 +54,7 @@ def transcribe_file(model, srt, plain, file):
     return result, transcript, subtitles
 
 
-def transcribe_main(file):
+def transcribe_main(file, output_dir="whisper_output"):
 
     # specify the type of file outputs you need from Whisper
     plain = True
@@ -68,12 +68,12 @@ def transcribe_main(file):
     # Load the desired model
     model = whisper.load_model("medium.en").to(DEVICE)
 
-    result, transcript, subtitles = transcribe_file(model, srt, plain, file)
+    result, transcript, subtitles = transcribe_file(model, srt, plain, file, output_dir)
 
     return transcript, subtitles
 
 
-def local_whisper_process(input_folder, crew_output_folder, transcript=None, subtitles=None,
+def local_whisper_process(input_folder, output_folder, transcript=None, subtitles=None,
                           transcribe_flag=True):
     for filename in os.listdir(input_folder):
         if filename.endswith(".mp4"):
@@ -82,34 +82,33 @@ def local_whisper_process(input_folder, crew_output_folder, transcript=None, sub
 
             if transcribe_flag:
                 if transcript and subtitles:
-                    initial_srt_path = os.path.join(crew_output_folder,
+                    initial_srt_path = os.path.join(output_folder,
                                                     f"{os.path.splitext(filename)[0]}_subtitles.srt")
                     with open(initial_srt_path, 'w') as srt_file:
                         srt_file.write(subtitles)
                 else:
-                    full_transcript, full_subtitles = transcribe_main(input_video_path)
-                    initial_srt_path = os.path.join(crew_output_folder,
+                    full_transcript, full_subtitles = transcribe_main(input_video_path, output_dir=output_folder)
+                    initial_srt_path = os.path.join(output_folder,
                                                     f"{os.path.splitext(filename)[0]}_subtitles.srt")
                     with open(initial_srt_path, 'w') as srt_file:
                         srt_file.write(full_subtitles)
             else:
-                initial_srt_path = os.path.join(crew_output_folder, f"{os.path.splitext(filename)[0]}.srt")
+                initial_srt_path = os.path.join(output_folder, f"{os.path.splitext(filename)[0]}.srt")
 
             if wait_for_file(initial_srt_path):
-                whisper_output_dir = 'whisper_output'
-                srt_files = [f for f in os.listdir(whisper_output_dir) if f.endswith('.srt')]
-                txt_files = [f for f in os.listdir(whisper_output_dir) if f.endswith('.txt')]
+                srt_files = [f for f in os.listdir(output_folder) if f.endswith('.srt')]
+                txt_files = [f for f in os.listdir(output_folder) if f.endswith('.txt')]
 
                 if srt_files and txt_files:
-                    subtitles_file = os.path.join(whisper_output_dir, srt_files[0])
-                    transcript_file = os.path.join(whisper_output_dir, txt_files[0])
+                    subtitles_file = os.path.join(output_folder, srt_files[0])
+                    transcript_file = os.path.join(output_folder, txt_files[0])
                     with open(transcript_file, 'r') as file:
                         transcript = file.read()
                     with open(subtitles_file, 'r') as file:
                         subtitles = file.read()
-                    for srt_filename in sorted(os.listdir(crew_output_folder)):
+                    for srt_filename in sorted(os.listdir(output_folder)):
                         if srt_filename.startswith("new_file_return_subtitles") and srt_filename.endswith(".srt"):
-                            subtitle_file_path = os.path.join(crew_output_folder, srt_filename)
+                            subtitle_file_path = os.path.join(output_folder, srt_filename)
                 else:
                     logging.error("No .srt or .txt files found in the whisper_output directory.")
             else:
@@ -120,9 +119,9 @@ def local_whisper_process(input_folder, crew_output_folder, transcript=None, sub
 
 if __name__ == "__main__":
     input_folder = 'input_files'
-    crew_output_folder = 'crew_output'
+    output_folder = 'whisper_output'
 
     if os.path.exists(input_folder):
-        local_whisper_process(input_folder, crew_output_folder)
+        local_whisper_process(input_folder, output_folder)
     else:
         logging.error(f"Input folder not found: {input_folder}")
