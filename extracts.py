@@ -58,11 +58,11 @@ def call_openai_api(transcript):
         
         2. For each standout moment you identify, extract a 1-minute segment of text from the transcript, centered around that moment. Ensure each segment is approximately 1 minute long when spoken (about 125 words or 10 spoken sentences).
         
-        3. From these segments, choose the top four that you believe have the highest potential to go viral on social media.
+        3. From these segments, choose the top three that you believe have the highest potential to go viral on social media.
         
-        4. Rank these four clips from most to least viral potential based on your assessment.
+        4. Rank these three clips from most to least viral potential based on your assessment.
         
-        5. Determine the word count for each of the four selected clips.
+        5. Determine the word count for each of the three selected clips.
         
         6. Format your final output as a JSON object containing an ordered list of the selected clips, each with its extracted text. The JSON object should look like this:
         
@@ -81,11 +81,6 @@ def call_openai_api(transcript):
             {{
                 "rank": 3,
                 "text": "<extracted text for clip 3>",
-                "wordcount": <length of the extracted text in words>
-            }},
-            {{
-                "rank": 4,
-                "text": "<extracted text for clip 4>",
                 "wordcount": <length of the extracted text in words>
             }}
             ]
@@ -156,13 +151,13 @@ def call_openai_api(transcript):
 
         try:
             response_data = json.loads(response_text)
-            # Ensure there are exactly four clips
+            # Ensure there are exactly three clips
             if len(response_data.get('clips', [])) != 3:
-                logging.error("The response does not contain exactly four clips. Generating filler content.")
+                logging.error("The response does not contain exactly three clips. Generating filler content.")
                 while len(response_data['clips']) < 3:
                     response_data['clips'].append({
                         "rank": len(response_data['clips']) + 1,
-                        "text": "This is filler content to ensure there are exactly four clips."
+                        "text": "This is filler content to ensure there are exactly three clips."
                     })
             return response_data
         except json.JSONDecodeError as e:
@@ -217,5 +212,5 @@ if __name__ == "__main__":
 # TODO: Split the below tasks into separate API queries for different large language model (LLM) calls or agents to implement a divide-and-conquer approach.
 # 1. Read the entire transcript carefully, identifying key moments that stand out as particularly impactful or shareable.
 # 2. For each of these moments, extract a 1-minute segment of text from the transcript, centered around that moment. Ensure each segment is approximately 1 minute long when spoken (about 8 sentences).
-# 3. From these segments, choose the top four that you believe have the highest potential to go viral.
-# 4. Rank these four clips from most to least viral potential based on your assessment.
+# 3. From these segments, choose the top three that you believe have the highest potential to go viral.
+# 4. Rank these three clips from most to least viral potential based on your assessment.
