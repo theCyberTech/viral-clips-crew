@@ -31,10 +31,13 @@ required_vars = ['OPENAI_API_KEY', 'GEMINI_API_KEY']
 This for loop checks if the required environment variables are set. 
 If any of the required environment variables are set to 'None', an EnvironmentError is raised.
 """
+# Sentinel values that should be treated as unset
+_NONE_SENTINELS = frozenset({'none', 'null', 'undefined', ''})
+
 for var in required_vars:
     value = os.getenv(var)
-    if value is None or value == 'None':
-        raise EnvironmentError(f"Required environment variable {var} is not set or is set to 'None'.")
+    if value is None or value.strip().lower() in _NONE_SENTINELS:
+        raise EnvironmentError(f"Required environment variable {var} is not set or is set to '{value}'.")
 
 def get_aspect_ratio_choice():
     while True:

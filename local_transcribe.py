@@ -9,9 +9,6 @@ import torch
 import whisper
 from whisper.utils import get_writer
 
-# Local application imports
-from utils import wait_for_file
-
 # Setup logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 warnings.filterwarnings("ignore")
@@ -73,46 +70,19 @@ def transcribe_main(file, output_dir="whisper_output"):
     return transcript, subtitles
 
 
-def local_whisper_process(input_folder, output_folder, transcript=None, subtitles=None,
-                          transcribe_flag=True):
+def local_whisper_process(input_folder, output_folder):
+    """Transcribe all .mp4 files in input_folder using local Whisper.
+
+    Args:
+        input_folder: Directory containing .mp4 files to transcribe.
+        output_folder: Directory to write .srt and .txt output files.
+    """
     for filename in os.listdir(input_folder):
         if filename.endswith(".mp4"):
             input_video_path = os.path.join(input_folder, filename)
             logging.info(f"Processing video: {input_video_path}")
 
-            if transcribe_flag:
-                if transcript and subtitles:
-                    initial_srt_path = os.path.join(output_folder,
-                                                    f"{os.path.splitext(filename)[0]}_subtitles.srt")
-                    with open(initial_srt_path, 'w') as srt_file:
-                        srt_file.write(subtitles)
-                else:
-                    full_transcript, full_subtitles = transcribe_main(input_video_path, output_dir=output_folder)
-                    initial_srt_path = os.path.join(output_folder,
-                                                    f"{os.path.splitext(filename)[0]}_subtitles.srt")
-                    with open(initial_srt_path, 'w') as srt_file:
-                        srt_file.write(full_subtitles)
-            else:
-                initial_srt_path = os.path.join(output_folder, f"{os.path.splitext(filename)[0]}.srt")
-
-            if wait_for_file(initial_srt_path):
-                srt_files = [f for f in os.listdir(output_folder) if f.endswith('.srt')]
-                txt_files = [f for f in os.listdir(output_folder) if f.endswith('.txt')]
-
-                if srt_files and txt_files:
-                    subtitles_file = os.path.join(output_folder, srt_files[0])
-                    transcript_file = os.path.join(output_folder, txt_files[0])
-                    with open(transcript_file, 'r') as file:
-                        transcript = file.read()
-                    with open(subtitles_file, 'r') as file:
-                        subtitles = file.read()
-                    for srt_filename in sorted(os.listdir(output_folder)):
-                        if srt_filename.startswith("new_file_return_subtitles") and srt_filename.endswith(".srt"):
-                            subtitle_file_path = os.path.join(output_folder, srt_filename)
-                else:
-                    logging.error("No .srt or .txt files found in the whisper_output directory.")
-            else:
-                logging.error(f"Failed to verify the readiness of subtitles file: {initial_srt_path}")
+            transcribe_main(input_video_path, output_dir=output_folder)
 
     logging.info(f"local_transcribe.py completed")
 

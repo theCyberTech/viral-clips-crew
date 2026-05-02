@@ -49,56 +49,10 @@ def main(extracts):
         logging.error("Failed to read subtitles. Exiting.")
         return
 
-    subtitler_agent_1 = Agent(
+    subtitler_agent = Agent(
         role=dedent((
             f"""
-            Segment 1 Subtitler
-            """)),
-        backstory=dedent((
-            f"""
-            Experienced subtitler who writes captions or subtitles that accurately represent the audio, including dialogue, sound effects, and music. The subtitles need to be properly timed with the video using correct time codes.
-            """)),
-        goal=dedent((
-            f"""
-            Match a list of extracts from a video clip with the corresponding timed subtitles. Given the segments found by the Digital Producer, find the segment timings within the `.srt` file and return each segment as an `.srt` subtitle segment.
-            """)),
-        allow_delegation=False,
-        verbose=True,
-        max_iter=1,
-        max_rpm=1,
-        llm=ChatGoogleGenerativeAI(model="gemini-1.5-pro-exp-0801",
-                                   verbose=True,
-                                   temperature=0.0,
-                                   google_api_key=gemini_api_key)
-    )
-
-    subtitler_agent_2 = Agent(
-        role=dedent((
-            f"""
-            Segment 2 Subtitler
-            """)),
-        backstory=dedent((
-            f"""
-            Experienced subtitler who writes captions or subtitles that accurately represent the audio, including dialogue, sound effects, and music. The subtitles need to be properly timed with the video using correct time codes.
-            """)),
-        goal=dedent((
-            f"""
-            Match a list of extracts from a video clip with the corresponding timed subtitles. Given the segments found by the Digital Producer, find the segment timings within the `.srt` file and return each segment as an `.srt` subtitle segment.
-            """)),
-        allow_delegation=False,
-        verbose=True,
-        max_iter=1,
-        max_rpm=1,
-        llm=ChatGoogleGenerativeAI(model="gemini-1.5-pro-exp-0801",
-                                   verbose=True,
-                                   temperature=0.0,
-                                   google_api_key=gemini_api_key)
-    )
-
-    subtitler_agent_3 = Agent(
-        role=dedent((
-            f"""
-            Segment 3 Subtitler
+            Subtitler
             """)),
         backstory=dedent((
             f"""
@@ -140,7 +94,7 @@ def main(extracts):
             [segment number]
             [start time] --> [end time] 
             [matched transcription extract]
-            5. After processing the extract, combine the formatted matches into a single block of text. This should resemble a valid .srt subtitle file, with each match separated by a blank line.
+            4. After processing the extract, combine the formatted matches into a single block of text. This should resemble a valid .srt subtitle file, with each match separated by a blank line.
         
             Please note: .srt files have a specific format that must be followed exactly in order for them to be readable. Therefore, it is crucial that you do not include any extra content beyond the raw subtitle data itself. This means:
             - No comments explaining your work
@@ -182,7 +136,7 @@ def main(extracts):
             - No additional text that isn't part of the subtitle segments
             - No comments like: "Here is the output with the matched segments in the requested format:"
             """)),
-        agent=subtitler_agent_1,
+        agent=subtitler_agent,
         output_file=f'crew_output/new_file_return_subtitles_1_{datetime.now().strftime("%Y%m%d_%H%M%S_%f")}.srt'
     )
 
@@ -208,7 +162,7 @@ def main(extracts):
             [segment number]
             [start time] --> [end time] 
             [matched transcription extract]
-            5. After processing the extract, combine the formatted matches into a single block of text. This should resemble a valid .srt subtitle file, with each match separated by a blank line.
+            4. After processing the extract, combine the formatted matches into a single block of text. This should resemble a valid .srt subtitle file, with each match separated by a blank line.
 
             Please note: .srt files have a specific format that must be followed exactly in order for them to be readable. Therefore, it is crucial that you do not include any extra content beyond the raw subtitle data itself. This means:
             - No comments explaining your work
@@ -250,8 +204,7 @@ def main(extracts):
             - No additional text that isn't part of the subtitle segments
             - No comments like: "Here is the output with the matched segments in the requested format:"
             """)),
-            agent=subtitler_agent_2,
-            # ↑ specify which task's output should be used as context for subsequent tasks
+            agent=subtitler_agent,
             output_file=f'crew_output/new_file_return_subtitles_2_{datetime.now().strftime("%Y%m%d_%H%M%S_%f")}.srt'
         )
 
@@ -277,7 +230,7 @@ def main(extracts):
             [segment number]
             [start time] --> [end time] 
             [matched transcription extract]
-            5. After processing the extract, combine the formatted matches into a single block of text. This should resemble a valid .srt subtitle file, with each match separated by a blank line.
+            4. After processing the extract, combine the formatted matches into a single block of text. This should resemble a valid .srt subtitle file, with each match separated by a blank line.
 
             Please note: .srt files have a specific format that must be followed exactly in order for them to be readable. Therefore, it is crucial that you do not include any extra content beyond the raw subtitle data itself. This means:
             - No comments explaining your work
@@ -319,12 +272,12 @@ def main(extracts):
             - No additional text that isn't part of the subtitle segments
             - No comments like: "Here is the output with the matched segments in the requested format:"
             """)),
-        agent=subtitler_agent_3,
+        agent=subtitler_agent,
         output_file=f'crew_output/new_file_return_subtitles_3_{datetime.now().strftime("%Y%m%d_%H%M%S_%f")}.srt'
     )
 
     crew = Crew(
-        agents=[subtitler_agent_1, subtitler_agent_2, subtitler_agent_3],
+        agents=[subtitler_agent],
         tasks=[return_subtitles_1, return_subtitles_2, return_subtitles_3],
         verbose=2,
         process=Process.sequential,
