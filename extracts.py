@@ -1,5 +1,4 @@
 # Standard library imports
-import sys
 import json
 import os
 from textwrap import dedent

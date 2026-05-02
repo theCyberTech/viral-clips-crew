@@ -37,7 +37,7 @@ def transcribe_file(model, srt, plain, file, output_dir="whisper_output"):
         transcript = result["text"]
 
     if srt:
-        logging.info(f"Creating SRT file")
+        logging.info("Creating SRT file")
         srt_writer = get_writer("srt", str(output_dir))
         srt_writer(result, output_file_name)
 
@@ -84,7 +84,7 @@ def local_whisper_process(input_folder, output_folder):
 
             transcribe_main(input_video_path, output_dir=output_folder)
 
-    logging.info(f"local_transcribe.py completed")
+    logging.info("local_transcribe.py completed")
 
 
 if __name__ == "__main__":

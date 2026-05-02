@@ -1,6 +1,5 @@
 # Standard library imports
 import os
-import sys
 import logging
 from pathlib import Path
 from textwrap import dedent
@@ -51,15 +50,15 @@ def main(extracts):
 
     subtitler_agent = Agent(
         role=dedent((
-            f"""
+            """
             Subtitler
             """)),
         backstory=dedent((
-            f"""
+            """
             Experienced subtitler who writes captions or subtitles that accurately represent the audio, including dialogue, sound effects, and music. The subtitles need to be properly timed with the video using correct time codes.
             """)),
         goal=dedent((
-            f"""
+            """
             Match a list of extracts from a video clip with the corresponding timed subtitles. Given the segments found by the Digital Producer, find the segment timings within the `.srt` file and return each segment as an `.srt` subtitle segment.
             """)),
         allow_delegation=False,
@@ -104,7 +103,7 @@ def main(extracts):
             Simply return the matches, properly formatted, as the entire contents of your response.
             """)),
         expected_output=dedent((
-            f"""
+            """
             Format each match exactly as follows, and include only these details:
         
             [segment number]
@@ -172,7 +171,7 @@ def main(extracts):
             Simply return the matches, properly formatted, as the entire contents of your response.
             """)),
         expected_output=dedent((
-            f"""
+            """
             Format each match exactly as follows, and include only these details:
 
             [segment number]
@@ -240,7 +239,7 @@ def main(extracts):
             Simply return the matches, properly formatted, as the entire contents of your response.
             """)),
         expected_output=dedent((
-            f"""
+            """
             Format each match exactly as follows, and include only these details:
 
             [segment number]
@@ -284,9 +283,9 @@ def main(extracts):
     )
 
     result = crew.kickoff()
-    logging.info(dedent(f"""\n\n########################"""))
-    logging.info(dedent(f"""## Here is your custom crew run result:"""))
-    logging.info(dedent(f"""########################\n"""))
+    logging.info(dedent("""\n\n########################"""))
+    logging.info(dedent("""## Here is your custom crew run result:"""))
+    logging.info(dedent("""########################\n"""))
     logging.info(result)
 
     return result
