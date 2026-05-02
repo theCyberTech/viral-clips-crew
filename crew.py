@@ -22,9 +22,6 @@ load_dotenv()
 
 gemini_api_key = os.getenv('GEMINI_API_KEY')
 
-# Ensure the Path is correctly imported
-if 'Path' not in globals():
-    from pathlib import Path
 
 def get_subtitles():
     whisper_output_dir = Path('whisper_output')
