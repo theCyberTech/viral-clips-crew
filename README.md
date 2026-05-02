@@ -1,106 +1,193 @@
 <a href="https://x.com/alxfazio" target="_blank">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="images/vcc-github-banner.png">
-    <img alt="OpenAI Cookbook Logo" src="images/vcc-github-banner.png" width="400px" style="max-width: 100%; margin-bottom: 20px;">
+    <img alt="Viral Clips Crew Banner" src="images/vcc-github-banner.png" width="400px" style="max-width: 100%; margin-bottom: 20px;">
   </picture>
 </a>
 
-Your [CrewAI](https://github.com/joaomdmoura/crewAI) Powered Video Editing Assistant
+# Viral Clips Crew
 
-Are you a social media content curator? Skip the tedious editing process and get polished video highlights in minutes. `viral-clips-crew` watches and listens to long-form content, extracting the most striking and potentially viral segments, ready for publication on social media.
+A [CrewAI](https://github.com/joaomdmoura/crewAI)-powered video editing assistant that watches long-form content and extracts the most engaging, potentially viral segments — trimmed, subtitled, and ready for social media.
 
 > [!note]
-> This project was 99% vibe coded as a fun Saturday hack. I'm not going to support it in any way, it's provided here as is for other people's inspiration and I don't intend to improve it. Code is ephemeral now and libraries are over, ask your LLM to change it in whatever way you like.
+> Originally created by [Alex Fazio](https://x.com/alxfazio) as a weekend hack. This fork extends and refines the pipeline with local transcription, improved clipping logic, and a cleanup utility.
 
-## Content Repurposing Made Easy
+## How It Works
 
-<div align="center">
-  <img src="https://github.com/alexfazio/viral-clips-crew/assets/34505954/c69da629-06eb-4279-a5cb-0d8d7fc1dfee" width="600px" height="auto">
-</div>
+The pipeline has six stages:
 
-`viral-clips-crew` helps you repackage your valuable content in new and engaging ways to capture attention on social media and drive traffic back to the original long-form piece. Whether you're looking to refresh your own content or recycle content from other creators, this tool streamlines the process, making content repurposing effortless and efficient.
+```
+Input → Transcribe → Extract → Match → Clip → Subtitle
+```
+
+1. **Input** — Choose a YouTube URL (auto-downloaded via `yt-dlp`) or an existing `.mp4` file in `input_files/`.
+2. **Transcribe** — YouTube videos use the transcript API when available; local files use [OpenAI Whisper](https://github.com/openai/whisper) (`medium.en` model). Outputs `.srt` and `.txt` files to `whisper_output/`.
+3. **Extract** — GPT-4o reads the full transcript and identifies the top 3 clips with the highest viral potential, returning structured JSON.
+4. **Match** — A CrewAI agent powered by Gemini (`gemini-1.5-pro-exp-0801`) matches each extract to its exact `.srt` subtitle timestamps.
+5. **Clip** — `ffmpeg` trims the video into 30–150 second segments, optionally cropping to 1:1 (square) for social platforms. Outputs to `clipper_output/`.
+6. **Subtitle** — Subtitles are burned into the trimmed clips using `ffmpeg` with adjusted timings. Final output lands in `subtitler_output/`.
+
+## Project Structure
+
+| File | Purpose |
+|------|---------|
+| `app.py` | Main orchestrator — runs the full pipeline end-to-end |
+| `ytdl.py` | Downloads YouTube videos and fetches transcripts via YouTube Transcript API |
+| `local_transcribe.py` | Transcribes local `.mp4` files using OpenAI Whisper locally |
+| `extracts.py` | Calls OpenAI (GPT-4o) to identify the 3 most viral-worthy segments from the transcript |
+| `crew.py` | CrewAI agent (Gemini) matches extract text to `.srt` timing segments |
+| `clipper.py` | Trims video to matched segments using `ffmpeg`; supports 1:1 square cropping |
+| `subtitler.py` | Adjusts subtitle timings and burns them into the final video |
+| `reboot.py` | Cleanup utility — moves intermediate files to trash for a fresh run |
+| `utils.py` | File-lock helper for multi-process coordination |
+| `resources/` | Prompt templates and YouTube URL format reference |
 
 ## Requirements
 
-This project requires:
-
-- Python 3.7+
-- CrewAI
-- OpenAI API key and Google Gemini API key
-
-All required Python libraries are listed in `pyproject.toml`.
+- **Python** ≥ 3.10, ≤ 3.13 (managed with Poetry)
+- **API keys**: [OpenAI](https://platform.openai.com/api-keys) and [Google Gemini](https://aistudio.google.com/apikey)
+- **ffmpeg** installed and available on `$PATH`
+- **CUDA-capable GPU** recommended for local Whisper (falls back to CPU)
 
 ## Installation
 
-1. Clone this repository to your local machine:
+1. **Clone the repository:**
 
-    ```shell
-    git clone https://github.com/alexfazio/viral-clips-crew.git
-    ```
+   ```shell
+   git clone https://github.com/alexfazio/viral-clips-crew.git
+   cd viral-clips-crew
+   ```
 
-2. Install Poetry to automatically manage project dependencies:
+2. **Install Poetry** (if not already installed):
 
-    ```shell
-    pip install poetry
-    ```
+   ```shell
+   pip install poetry
+   ```
 
-3. Install the required Python packages using Poetry:
+3. **Install dependencies:**
 
-    ```shell
-    poetry install
-    ```
+   ```shell
+   poetry install
+   poetry update pydantic
+   ```
 
-4. Update Pydantic:
+4. **Configure API keys:**
 
-    ```shell
-    poetry update pydantic
-    ```
+   Copy `.env.example` to `.env` and fill in your keys:
 
-5. Open `.env` and insert your OpenAI API key and Google Gemini API key.
+   ```shell
+   cp .env.example .env
+   ```
 
-    ```shell
-   echo -e "OPENAI_API_KEY=<your-api-key>\nGEMINI_API_KEY=<your-api-key>" > .env
-    ```
+   Then edit `.env`:
+
+   ```env
+   OPENAI_API_KEY=sk-...
+   GEMINI_API_KEY=AIza...
+   ```
+
+5. **Install ffmpeg** (if not already installed):
+
+   ```shell
+   # macOS
+   brew install ffmpeg
+
+   # Ubuntu/Debian
+   sudo apt install ffmpeg
+
+   # Windows (via Chocolatey)
+   choco install ffmpeg
+   ```
 
 ## Usage
 
-After setting up, drag your desired clip into the `input_files` directory. 
+Run the full pipeline:
 
-**Gemini can process videos up to 1 hour in length. If you are using the OpenAI API, please ensure that the clip is less than 15 minutes in length. The current LLM context windows are approximately 15 minutes.**
+```shell
+poetry run python app.py
+```
 
-Run `viral-clips-crew` using Poetry with the following command:
+You'll be prompted to:
+1. **Choose input source** — YouTube URL or existing local video
+2. **Select aspect ratio** — keep original or crop to 1:1 square
 
-    ```shell
-    poetry run python app.py
-    ```
+The pipeline then runs automatically. Output files appear in:
 
-This will kickstart the process from beginning to completion.
+| Directory | Contents |
+|-----------|----------|
+| `subtitler_output/` | **Final** trimmed and subtitled `.mp4` clips |
+| `clipper_output/` | Trimmed clips (pre-subtitle) |
+| `crew_output/` | Matched `.srt` subtitle segments + API response JSON |
+| `whisper_output/` | Raw transcription (`.srt` + `.txt`) |
 
-Final output will be in the `subtitler_output` directory.
+### Cleanup Between Runs
 
-## Support
+To clear intermediate files and start fresh:
 
-If you like this project and want to support it, please consider leaving a star. Every contribution helps keep the project running. Thank you!
+```shell
+poetry run python reboot.py
+```
+
+This moves output files to the system trash, preserving your `input_files/PLACE_CLIPS_HERE` placeholder.
 
 ## Troubleshooting
 
-If you encounter a `TypeError: 'NoneType' object is not iterable`, please check the following:  
-- Ensure your API keys are correctly set in the `.env` file.  
-- Verify that you have enough pay-as-you-go credits in your OpenAI account and Google Cloud account.
+| Issue | Likely Cause | Fix |
+|-------|-------------|-----|
+| `TypeError: 'NoneType' object is not iterable` | Missing or invalid API key | Check `.env` and API credit balance |
+| `EnvironmentError: Required environment variable not set` | Empty `.env` values | Ensure keys are set to real values, not `"none"` or `""` |
+| `No module named 'torch'` | Dependencies not installed | Run `poetry install` |
+| `ffmpeg: command not found` | ffmpeg missing | Install ffmpeg (see Installation) |
+| `No transcript found` for YouTube | Video has no captions | The video will still download; transcription falls back to local Whisper |
+| Subtitle matching is inaccurate | Gemini couldn't align extract with SRT | Try a video with clearer speech or shorter length |
 
-## Note
+## How Individual Scripts Work
 
-The code for `viral-clips-crew` is intended for demonstrative purposes and is not meant for production use. The API keys are hardcoded and need to be replaced with your own. Always ensure your keys are kept secure.
+### Standalone Execution
+
+Each module can run independently for testing or partial workflows:
+
+```shell
+# Download a YouTube video + transcript only
+poetry run python ytdl.py
+
+# Transcribe local videos only
+poetry run python local_transcribe.py
+
+# Run extract → match → clip → subtitle for pre-existing files
+poetry run python crew.py
+
+# Clip a video using an existing SRT file
+poetry run python clipper.py
+
+# Burn subtitles into a trimmed video
+poetry run python subtitler.py
+```
+
+### Extract Logic (`extracts.py`)
+
+GPT-4o receives the full transcript and is prompted to find three ~1-minute segments (≈125 words, ≈10 sentences) ranked by viral potential. The structured JSON schema enforces exactly 3 clips with text, rank, and word count. If fewer than 3 are returned, filler entries are appended.
+
+### Subtitle Matching (`crew.py`)
+
+Three parallel CrewAI tasks each take one extract and scan the full `.srt` file to find the best-matching subtitle segment by word/phrase overlap. Each returns properly formatted `.srt` with segment numbers, timestamps, and matched text. The agent runs with `max_iter=1` and temperature `0.0` for deterministic output.
+
+### Clipping Logic (`clipper.py`)
+
+Subtitle blocks within a 2-second gap are merged into single clips. Clips shorter than 30 seconds or longer than 2m30s are skipped. Videos can be cropped to 1:1 (square) centered on the original frame, or kept at their native aspect ratio.
+
+### Subtitle Burn-in (`subtitler.py`)
+
+Subtitle timestamps are offset so the first spoken word starts at `00:00:00,000`. The file is re-encoded to UTF-8 to avoid character issues, then burned into the video using `ffmpeg`'s `subtitles` filter. Temporary files are cleaned up automatically.
 
 ## Credits
 
-Thank you to [Rip&Tear](https://x.com/Cyb3rCh1ck3n) for his ongoing assistance in improving this tool.
+- Original concept and code by [Alex Fazio](https://x.com/alxfazio)
+- Improvements and assistance by [Rip&Tear](https://x.com/Cyb3rCh1ck3n)
 
 ## License
 
-[MIT](https://opensource.org/licenses/MIT)
-
-Copyright (c) 2024-present, Alex Fazio
+[MIT](https://opensource.org/licenses/MIT) — Copyright (c) 2024-present, Alex Fazio
 
 ---
 
