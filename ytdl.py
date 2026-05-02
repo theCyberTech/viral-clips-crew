@@ -5,7 +5,12 @@ import re
 from pathlib import Path
 
 # Third party imports
-from youtube_transcript_api import YouTubeTranscriptApi
+from youtube_transcript_api import (
+    YouTubeTranscriptApi,
+    NoTranscriptFound,
+    TranscriptsDisabled,
+    NoTranscriptAvailable,
+)
 import yt_dlp
 import ffmpeg
 
@@ -105,12 +110,21 @@ def main(yt_vid_url, mp4_dir_save_path, srt_dir_save_path, txt_dir_save_path):
 
     yt_video_id = extract_video_id(yt_vid_url)
 
-    # this creates YouTubeTranscriptApi object
-    transcript = YouTubeTranscriptApi.get_transcript(yt_video_id)
+    # Attempt to fetch transcript; skip SRT/TXT generation if unavailable
+    try:
+        transcript = YouTubeTranscriptApi.get_transcript(yt_video_id)
+    except (NoTranscriptFound, TranscriptsDisabled, NoTranscriptAvailable) as e:
+        logging.warning(
+            "No transcript available for video %s: %s. Skipping SRT/TXT generation.",
+            yt_video_id, e,
+        )
+        transcript = None
 
     yt_vid_url_to_mp4(yt_vid_url, mp4_dir_save_path)
-    yt_vid_id_to_srt(transcript, yt_video_id, srt_dir_save_path)
-    yt_vid_id_to_txt(transcript,  yt_video_id, txt_dir_save_path)
+
+    if transcript is not None:
+        yt_vid_id_to_srt(transcript, yt_video_id, srt_dir_save_path)
+        yt_vid_id_to_txt(transcript, yt_video_id, txt_dir_save_path)
 
 if __name__ == "__main__":
     yt_vid_url = input("Enter the YouTube URL: ")
