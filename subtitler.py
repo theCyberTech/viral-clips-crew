@@ -63,14 +63,29 @@ def convert_to_utf8(subtitle_path, output_path):
         logging.error(f"Error during subtitle conversion: {e}")
 
 
+def _escape_ffmpeg_filter_path(path):
+    """
+    Escape a filesystem path for safe use inside an ffmpeg filter argument.
+    Special characters in ffmpeg filter graphs (\\, :, ') are escaped and
+    the result is wrapped in single quotes.
+    """
+    # Order matters: escape backslash first so we don't re-escape our own
+    # injected backslashes in later steps.
+    escaped = path.replace('\\', '\\\\')
+    escaped = escaped.replace(':', '\\:')
+    escaped = escaped.replace("'", "\\'")
+    return f"'{escaped}'"
+
+
 def burn_subtitles(video_path, subtitle_path, output_video_path):
     """
     Uses ffmpeg to burn subtitles into the video.
     """
+    safe_path = _escape_ffmpeg_filter_path(subtitle_path)
     cmd = [
         'ffmpeg',
         '-i', video_path,
-        '-vf', f"subtitles={subtitle_path}",
+        '-vf', f"subtitles={safe_path}",
         '-c:a', 'copy',
         output_video_path
     ]
