@@ -7,7 +7,6 @@ from datetime import datetime
 
 # Third party imports
 from dotenv import load_dotenv
-from langchain_google_genai import ChatGoogleGenerativeAI
 from crewai import Agent, Task, Crew, Process
 
 # Local application imports
@@ -19,7 +18,19 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 # Load environment variables
 load_dotenv()
 
-gemini_api_key = os.getenv('GEMINI_API_KEY')
+# ── OpenRouter configuration ─────────────────────────────────────────────
+_OPENROUTER_KEY = os.getenv("OPENROUTER_API_KEY")
+if _OPENROUTER_KEY:
+    os.environ.setdefault("OPENROUTER_API_KEY", _OPENROUTER_KEY)
+else:
+    _openai_key = os.getenv("OPENAI_API_KEY")
+    if _openai_key:
+        os.environ.setdefault("OPENAI_API_KEY", _openai_key)
+        os.environ.setdefault(
+            "OPENAI_API_BASE", "https://openrouter.ai/api/v1"
+        )
+
+GEMINI_MODEL = "openrouter/google/gemini-3-flash-preview"
 
 
 def get_subtitles():
@@ -65,10 +76,7 @@ def main(extracts):
         verbose=True,
         max_iter=1,
         max_rpm=1,
-        llm=ChatGoogleGenerativeAI(model="gemini-1.5-pro-exp-0801",
-                                   verbose=True,
-                                   temperature=0.0,
-                                   google_api_key=gemini_api_key)
+        llm=GEMINI_MODEL,
     )
 
     return_subtitles_1 = Task(

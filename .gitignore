@@ -86,3 +86,12 @@ whisper_output
 clipper_output
 input_files/*
 !input_files/PLACE_CLIPS_HERE
+
+# Python virtual environment
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# uv lockfile (alternative to poetry.lock)
+uv.lock

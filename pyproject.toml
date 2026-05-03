@@ -1,35 +1,35 @@
-[tool.poetry]
+[project]
 name = "viral-clips-crew"
 version = "0.0.2"
-description = ""
-authors = ["Alex Fazio <alessandro.fazio@me.com>", "theCyberTech <the_t3ch@pm.me>"]
+description = "CrewAI-powered video editing assistant that extracts viral clips from long-form content"
+authors = [
+    { name = "Alex Fazio", email = "alessandro.fazio@me.com" },
+    { name = "theCyberTech", email = "the_t3ch@pm.me" },
+]
+requires-python = ">=3.10,<=3.13"
 
-[tool.poetry.scripts]
+dependencies = [
+    "pydantic>=2.8",
+    "crewai>=1.14",
+    "setuptools>=72",
+    "python-decouple>=3.8",
+    "langchain-community>=0.0.38",
+    "openai-whisper @ git+https://github.com/openai/whisper.git",
+    "torch>=2.3",
+    "ffmpeg-python>=0.2",
+    "crewai-tools>=0.4",
+    "openai>=1.40",
+    "send2trash>=1.8",
+    "maskpass>=0.3",
+    "youtube-transcript-api>=0.6",
+    "lockfile>=0.12",
+    "yt-dlp>=2024",
+    "requests>=2.32",
+]
+
+[project.scripts]
 viral-clips-crew = "app:main"
 
-[tool.poetry.dependencies]
-python = ">=3.10,<=3.13"
-pydantic = "^2.8"
-crewai = "^0.30"
-setuptools = "^72"
-python-decouple = "^3.8"
-langchain-community = "^0.0.38"
-openai-whisper = {git = "https://github.com/openai/whisper.git"}
-torch = "^2.3"
-ffmpeg-python = "^0.2"
-crewai_tools = "^0.4"
-openai = "^1.40"
-send2trash = "^1.8"
-langchain_google_genai = "^1.0"
-maskpass = "^0.3"
-youtube-transcript-api = "^0.6"
-lockfile = "^0.12"
-yt-dlp = "^2024"
-requests = "^2.32"
-
-[[tool.poetry.packages]]
-include = "*.py"
-
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["setuptools>=72"]
+build-backend = "setuptools.build_meta"

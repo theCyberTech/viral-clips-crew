@@ -14,7 +14,7 @@ import subtitler
 import crew
 from ytdl import main as ytdl_main
 from local_transcribe import local_whisper_process
-import extracts
+import extraction_crew
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -24,20 +24,29 @@ warnings.filterwarnings("ignore")
 # Load environment variables
 load_dotenv()
 
-# List of required environment variables
-required_vars = ['OPENAI_API_KEY', 'GEMINI_API_KEY']
+# List of required environment variables.
+# OpenRouter is the primary provider; OPENAI_API_KEY fallback is also accepted.
+required_vars = ['OPENROUTER_API_KEY', 'OPENAI_API_KEY']
 
-"""
-This for loop checks if the required environment variables are set. 
-If any of the required environment variables are set to 'None', an EnvironmentError is raised.
-"""
+# Check that at least one required key is set (not all are needed —
+# OpenRouter is the default but direct OpenAI key is also accepted).
 # Sentinel values that should be treated as unset
 _NONE_SENTINELS = frozenset({'none', 'null', 'undefined', ''})
 
+_any_key_set = False
+_missing = []
 for var in required_vars:
     value = os.getenv(var)
     if value is None or value.strip().lower() in _NONE_SENTINELS:
-        raise EnvironmentError(f"Required environment variable {var} is not set or is set to '{value}'.")
+        _missing.append(var)
+    else:
+        _any_key_set = True
+
+if not _any_key_set:
+    raise EnvironmentError(
+        f"None of the required environment variables {required_vars} are set. "
+        f"Set at least one in .env (e.g. OPENROUTER_API_KEY=...)"
+    )
 
 def get_aspect_ratio_choice():
     while True:
@@ -95,12 +104,13 @@ def main():
     aspect_ratio_choice = get_aspect_ratio_choice()
 
     # After processing with ytdl or local_whisper_process
-    extracts_data = extracts.main()
+    # Run the 4-agent extraction crew (Scout → Editor → Curator → Producer)
+    extracts_data = extraction_crew.main()
     if extracts_data is None:
         logging.error("Failed to generate extracts. Exiting.")
         return
 
-    # Process with crew.py
+    # Process with crew.py (SRT timestamp matching)
     crew.main(extracts_data)
 
     # Process with clipper.py

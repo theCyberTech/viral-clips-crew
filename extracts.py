@@ -16,11 +16,15 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 load_dotenv()
 
-api_key = os.getenv("OPENAI_API_KEY")
+api_key = os.getenv("OPENAI_API_KEY") or os.getenv("OPENROUTER_API_KEY")
 if not api_key:
-    raise ValueError("API key not found. Please set the OPENAI_API_KEY environment variable.")
+    raise ValueError("API key not found. Please set OPENAI_API_KEY or OPENROUTER_API_KEY.")
 
-client = OpenAI(api_key=api_key)
+# If using OpenRouter, route through their API
+if os.getenv("OPENROUTER_API_KEY"):
+    client = OpenAI(api_key=api_key, base_url="https://openrouter.ai/api/v1")
+else:
+    client = OpenAI(api_key=api_key)
 
 
 def get_whisper_output():

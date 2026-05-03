@@ -1,0 +1,16 @@
+pydantic>=2.8
+crewai>=1.14
+setuptools>=72
+python-decouple>=3.8
+langchain-community>=0.0.38
+openai-whisper @ git+https://github.com/openai/whisper.git
+torch>=2.3
+ffmpeg-python>=0.2
+crewai-tools>=0.4
+openai>=1.40
+send2trash>=1.8
+maskpass>=0.3
+youtube-transcript-api>=0.6
+lockfile>=0.12
+yt-dlp>=2024
+requests>=2.32

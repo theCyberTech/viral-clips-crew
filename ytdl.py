@@ -9,7 +9,6 @@ from youtube_transcript_api import (
     YouTubeTranscriptApi,
     NoTranscriptFound,
     TranscriptsDisabled,
-    NoTranscriptAvailable,
 )
 import yt_dlp
 import ffmpeg
@@ -68,9 +67,9 @@ def yt_vid_id_to_srt(transcript, yt_video_id, srt_save_path):
 
     srt_content = []
     for i, entry in enumerate(transcript):
-        start = entry['start']
-        duration = entry['duration']
-        text = entry['text']
+        start = entry.start
+        duration = entry.duration
+        text = entry.text
 
         start_hours, start_remainder = divmod(start, 3600)
         start_minutes, start_seconds = divmod(start_remainder, 60)
@@ -100,7 +99,7 @@ def yt_vid_id_to_txt(transcript, yt_video_id, txt_save_path):
 
     # Write the transcript to a .txt file as a single line
     with open(os.path.join(txt_save_path, 'transcript.txt'), 'w', encoding='utf-8') as f:
-        full_transcript = ' '.join(entry['text'] for entry in transcript)
+        full_transcript = ' '.join(entry.text for entry in transcript)
         f.write(full_transcript)
 
 
@@ -112,8 +111,8 @@ def main(yt_vid_url, mp4_dir_save_path, srt_dir_save_path, txt_dir_save_path):
 
     # Attempt to fetch transcript; skip SRT/TXT generation if unavailable
     try:
-        transcript = YouTubeTranscriptApi.get_transcript(yt_video_id)
-    except (NoTranscriptFound, TranscriptsDisabled, NoTranscriptAvailable) as e:
+        transcript = YouTubeTranscriptApi().fetch(yt_video_id)
+    except (NoTranscriptFound, TranscriptsDisabled) as e:
         logging.warning(
             "No transcript available for video %s: %s. Skipping SRT/TXT generation.",
             yt_video_id, e,

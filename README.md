@@ -7,7 +7,7 @@
 
 # Viral Clips Crew
 
-A [CrewAI](https://github.com/joaomdmoura/crewAI)-powered video editing assistant that watches long-form content and extracts the most engaging, potentially viral segments — trimmed, subtitled, and ready for social media.
+A [CrewAI](https://github.com/crewAIInc/crewAI)-powered video editing assistant that watches long-form content and extracts the most engaging, potentially viral segments — trimmed, subtitled, and ready for social media.
 
 > [!note]
 > Originally created by [Alex Fazio](https://x.com/alxfazio) as a weekend hack. This fork extends and refines the pipeline with local transcription, improved clipping logic, and a cleanup utility.
@@ -34,7 +34,8 @@ Input → Transcribe → Extract → Match → Clip → Subtitle
 | `app.py` | Main orchestrator — runs the full pipeline end-to-end |
 | `ytdl.py` | Downloads YouTube videos and fetches transcripts via YouTube Transcript API |
 | `local_transcribe.py` | Transcribes local `.mp4` files using OpenAI Whisper locally |
-| `extracts.py` | Calls OpenAI (GPT-4o) to identify the 3 most viral-worthy segments from the transcript |
+| `extracts.py` | Legacy: single-call OpenAI extraction (replaced by extraction_crew.py) |
+| `extraction_crew.py` | 4-agent CrewAI pipeline (Scout → Editor → Curator → Producer) for viral clip extraction |
 | `crew.py` | CrewAI agent (Gemini) matches extract text to `.srt` timing segments |
 | `clipper.py` | Trims video to matched segments using `ffmpeg`; supports 1:1 square cropping |
 | `subtitler.py` | Adjusts subtitle timings and burns them into the final video |
@@ -44,8 +45,8 @@ Input → Transcribe → Extract → Match → Clip → Subtitle
 
 ## Requirements
 
-- **Python** ≥ 3.10, ≤ 3.13 (managed with Poetry)
-- **API keys**: [OpenAI](https://platform.openai.com/api-keys) and [Google Gemini](https://aistudio.google.com/apikey)
+- **Python** ≥ 3.10, ≤ 3.13
+- **API key**: [OpenRouter](https://openrouter.ai/keys) (one key for all models) — or direct [OpenAI](https://platform.openai.com/api-keys) key
 - **ffmpeg** installed and available on `$PATH`
 - **CUDA-capable GPU** recommended for local Whisper (falls back to CPU)
 
@@ -58,22 +59,26 @@ Input → Transcribe → Extract → Match → Clip → Subtitle
    cd viral-clips-crew
    ```
 
-2. **Install Poetry** (if not already installed):
+2. **Create a virtual environment and install dependencies:**
 
    ```shell
-   pip install poetry
+   python3 -m venv .venv
+   source .venv/bin/activate  # macOS/Linux
+   # .venv\Scripts\activate   # Windows
+   pip install -r requirements.txt
    ```
 
-3. **Install dependencies:**
+   Or if you have [uv](https://github.com/astral-sh/uv):
 
    ```shell
-   poetry install
-   poetry update pydantic
+   uv venv
+   source .venv/bin/activate
+   uv pip install -r requirements.txt
    ```
 
-4. **Configure API keys:**
+4. **Configure API key:**
 
-   Copy `.env.example` to `.env` and fill in your keys:
+   Copy `.env.example` to `.env` and fill in your key:
 
    ```shell
    cp .env.example .env
@@ -82,8 +87,13 @@ Input → Transcribe → Extract → Match → Clip → Subtitle
    Then edit `.env`:
 
    ```env
+   OPENROUTER_API_KEY=sk-or-v1-...
+   ```
+
+   Or use a direct OpenAI key:
+
+   ```env
    OPENAI_API_KEY=sk-...
-   GEMINI_API_KEY=AIza...
    ```
 
 5. **Install ffmpeg** (if not already installed):
@@ -104,7 +114,7 @@ Input → Transcribe → Extract → Match → Clip → Subtitle
 Run the full pipeline:
 
 ```shell
-poetry run python app.py
+python app.py
 ```
 
 You'll be prompted to:
@@ -125,7 +135,7 @@ The pipeline then runs automatically. Output files appear in:
 To clear intermediate files and start fresh:
 
 ```shell
-poetry run python reboot.py
+python reboot.py
 ```
 
 This moves output files to the system trash, preserving your `input_files/PLACE_CLIPS_HERE` placeholder.
@@ -134,9 +144,9 @@ This moves output files to the system trash, preserving your `input_files/PLACE_
 
 | Issue | Likely Cause | Fix |
 |-------|-------------|-----|
-| `TypeError: 'NoneType' object is not iterable` | Missing or invalid API key | Check `.env` and API credit balance |
+| `TypeError: 'NoneType' object is not iterable` | Missing or invalid API key | Check `.env` and OpenRouter credit balance |
 | `EnvironmentError: Required environment variable not set` | Empty `.env` values | Ensure keys are set to real values, not `"none"` or `""` |
-| `No module named 'torch'` | Dependencies not installed | Run `poetry install` |
+| `No module named 'torch'` | Dependencies not installed | Run `pip install -r requirements.txt` |
 | `ffmpeg: command not found` | ffmpeg missing | Install ffmpeg (see Installation) |
 | `No transcript found` for YouTube | Video has no captions | The video will still download; transcription falls back to local Whisper |
 | Subtitle matching is inaccurate | Gemini couldn't align extract with SRT | Try a video with clearer speech or shorter length |
@@ -149,24 +159,31 @@ Each module can run independently for testing or partial workflows:
 
 ```shell
 # Download a YouTube video + transcript only
-poetry run python ytdl.py
+python ytdl.py
 
 # Transcribe local videos only
-poetry run python local_transcribe.py
+python local_transcribe.py
 
 # Run extract → match → clip → subtitle for pre-existing files
-poetry run python crew.py
+python crew.py
 
 # Clip a video using an existing SRT file
-poetry run python clipper.py
+python clipper.py
 
 # Burn subtitles into a trimmed video
-poetry run python subtitler.py
+python subtitler.py
 ```
 
-### Extract Logic (`extracts.py`)
+### Extract Logic (`extraction_crew.py`)
 
-GPT-4o receives the full transcript and is prompted to find three ~1-minute segments (≈125 words, ≈10 sentences) ranked by viral potential. The structured JSON schema enforces exactly 3 clips with text, rank, and word count. If fewer than 3 are returned, filler entries are appended.
+A 4-agent CrewAI pipeline replaces the old single-call approach:
+
+- **Scout** (gpt-4o-mini) — Reads the transcript and tags 5-8 viral-candidate moments with reasons and categories
+- **Editor** (gpt-4o-mini) — Expands each candidate into a ~1-minute self-contained segment, scores coherence, and finds hook sentences
+- **Curator** (gpt-4o) — Scores and ranks the top 3-4 clips overall and per-platform (TikTok, YouTube Shorts, Instagram Reels, LinkedIn)
+- **Producer** (gpt-4o-mini) — Writes optimized social media captions, hashtags, and a batch caption
+
+Each agent's structured output flows to the next via Pydantic models, giving each step narrow and verifiable responsibility. The final output is saved to `crew_output/api_response.json`.
 
 ### Subtitle Matching (`crew.py`)
 
